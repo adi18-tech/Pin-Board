@@ -19,66 +19,101 @@ dotenv.config();
 
 const app = express();
 
-// 🌐 DB Connection
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch(err => console.error("❌ MongoDB error:", err));
 
-// 🧠 View Engine
+// Database Connection
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB connected"))
+  .catch(err => console.error("MongoDB error:", err));
+
+
+// View Engine
 app.engine("ejs", ejsMate);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
-// 🔧 Middleware
+
+// Middleware
 app.use(express.static(path.join(__dirname, "public")));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
 app.use(methodOverride('_method'));
 
-// 🛡️ Session Config with MongoStore (better for production)
+
+// Session Config
 app.use(session({
-  secret: process.env.SESSION_SECRET, // ✅ Read from .env
+  secret: process.env.SESSION_SECRET,
+
   resave: false,
+
   saveUninitialized: false,
+
   store: MongoStore.create({
     mongoUrl: process.env.MONGO_URI,
-    touchAfter: 24 * 3600 // 1 day
+    touchAfter: 24 * 3600
   }),
+
   cookie: {
     httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
+    maxAge: 1000 * 60 * 60 * 24 * 7
   }
 }));
 
 
-// 🔔 Flash messages
+// Flash Messages
 app.use(flash());
 
-// 🔐 Passport Config
-app.use(passport.initialize());
-app.use(passport.session());
-passport.use(new LocalStrategy(User.authenticate()));
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
 
-// 💡 Global Middleware
+// Passport Config
+app.use(passport.initialize());
+
+app.use(passport.session());
+
+passport.use(
+  new LocalStrategy(User.authenticate())
+);
+
+passport.serializeUser(
+  User.serializeUser()
+);
+
+passport.deserializeUser(
+  User.deserializeUser()
+);
+
+
+// Global Middleware
 app.use((req, res, next) => {
+
   res.locals.success = req.flash('success');
+
   res.locals.error = req.flash('error');
+
   res.locals.currentUser = req.user;
+
   next();
 });
 
-// 🚦 Routes
+
+// Routes
 app.use('/boards', boardRoutes);
+
 app.use('/boards/:boardId/pins', pinRoutes);
+
 app.use('/', authRoutes);
 
-app.get('/', (req, res) => res.redirect('/boards'));
 
-// 🚀 Server Start
+// Home Route
+app.get('/', (req, res) => {
+  res.redirect('/boards');
+});
+
+
+// Server Start
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-  console.log(`🚀 Server: http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
